@@ -1,6 +1,6 @@
-from fastapi import FastAPI, status, Response, HTTPException
+from fastapi import FastAPI, Query, status, Response, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 app = FastAPI(title="CRUD de producto")
 
@@ -90,4 +90,22 @@ def delete_product(product_id: int)-> Response:
         detail="Producto no encontrado"
     )
 
+@app.get(
+    "/producto/filter", 
+    response_model=List[ProductOut],
+    summary="Filtrar productos por categoría y/o precio máximo",
+    response_description="Lista (posiblemente vacía) de productos filtrados"
+)
+def get_product(
+    categoria: Optional[str] = Query(default=None, description="Categoría exacta (case-insensitive)"),
+    precio_max: Optional[float] = Query(default=None, ge=0,  description="Precio de preferencia máximo (>= 0)")
+)->List[ProductOut]:
+    filtrados = PRODUCT_DB
 
+    if categoria is not None:
+        filtrados = [p for p in filtrados if p.categoria.lower() == categoria.lower()]
+   
+    if precio_max is not None:
+        filtrados = [p for p in filtrados if p.precio <= precio_max]
+    
+    return [ProductOut(**p.model_dump()) for p in filtrados]
